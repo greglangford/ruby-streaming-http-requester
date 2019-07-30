@@ -13,12 +13,8 @@ module HTTP
     def get_multiple(urls)
       connection do |http|
         urls.each do |url|
-          uri = URI(url)
-          request = Net::HTTP::Get.new(uri)
-          request['User-Agent'] = @params[:useragent]
-
-          http.request request do |response|
-            yield url, response
+          request http, url do |uri, response|
+            yield uri, response
           end
         end
       end
@@ -40,6 +36,27 @@ module HTTP
     def connection
       @http.start(@host, @port, :use_ssl => @params[:use_ssl]) do |http|
         yield http
+      end
+    end
+
+    def request(http, url)
+      response_is_not_redirect = false
+
+      until response_is_not_redirect do
+        uri = URI(url)
+        request = Net::HTTP::Get.new(uri)
+        request['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36'
+
+        http.request request do |response|
+          case response
+          when Net::HTTPRedirection then
+            location = response['location']
+            uri = URI(location)
+          else
+            response_is_not_redirect = true
+            yield uri, response
+          end
+        end
       end
     end
   end
