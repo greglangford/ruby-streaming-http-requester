@@ -33,6 +33,8 @@ module HTTP
     end
 
     private
+    # need to pass variables to this method
+    # it will be reused to follow redirects
     def connection
       @http.start(@host, @port, :use_ssl => @params[:use_ssl]) do |http|
         yield http
@@ -54,6 +56,21 @@ module HTTP
             # I wonder if we can start a new connection here and return that response?
             location = response['location']
             uri = URI(location)
+
+            puts uri.to_s
+
+            puts "making new request"
+
+            @http.start(uri.host, uri.port, :use_ssl => true) do |http|
+              uri = URI(url)
+              request = Net::HTTP::Get.new(uri)
+              request['User-Agent'] = @params[:useragent]
+
+              http.request request do |response|
+                response_is_not_redirect = true
+                yield uri, response
+              end
+            end
           else
             response_is_not_redirect = true
             yield uri, response
