@@ -50,6 +50,8 @@ module HTTP
         http.request request do |response|
           case response
           when Net::HTTPRedirection then
+            # If redirect is to different scheme and port, new connection is needed.
+            # I wonder if we can start a new connection here and return that response?
             location = response['location']
             uri = URI(location)
           else
